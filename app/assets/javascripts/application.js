@@ -270,6 +270,7 @@ function ghostAppend(str) {
   $('#path').append(html);
 }
 
+
 $(document).ready(function() {
   var paper = Raphael(350, 75, 500, 500);
   initArcAttr(paper);
@@ -291,3 +292,4 @@ $(document).ready(function() {
 
   var radius = 30;
 });
+
