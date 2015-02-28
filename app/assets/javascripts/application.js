@@ -15,158 +15,135 @@
 //= require turbolinks
 //= require_tree .
 
-function colorLuminance(hex, lum) {
+var elementTree = {};
+var currentCircle;
+var currentText;
 
-  // validate hex string
-  hex = String(hex).replace(/[^0-9a-f]/gi, '');
-  if (hex.length < 6) {
-    hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-  }
-  lum = lum || 0;
+var elemMap = {};
+document.history = [];
+var previousSectors;
+var previousName;
 
-  // convert to decimal and change luminosity
-  var rgb = "#", c, i;
-  for (i = 0; i < 3; i++) {
-    c = parseInt(hex.substr(i*2,2), 16);
-    c = Math.round(Math.min(Math.max(0, c + (c * lum)), 255)).toString(16);
-    rgb += ("00"+c).substr(c.length);
-  }
+function animateCircle(paper, str, radius, cx, cy) {
+  currentCircle = paper.circle(cx, cy, 0);
+  currentCircle.attr("fill", "#000");
 
-  return rgb;
-}
+  currentText = paper.text(cx, cy, str);
+  currentText.attr({
+    "font-size": 0,
+    "fill": "#ffffff",
+    "font-family": "Lato"
+  });
 
-function randomColor() {
-  return '#' + (function co(lor){   return (lor +=
-  [0,1,2,3,4,5,6,7,8,9,'a','b','c','d','e','f'][Math.floor(Math.random()*16)])
-  && (lor.length == 6) ?  lor : co(lor); })('');
-}
+  currentCircle.animate({
+    r: radius
+  }, 500);
+  currentText.animate({
+    "font-size": 25
+  }, 500);
 
-function initArcAttr(paper) {
-  // setup arc attr
-  paper.customAttributes.arc = function (xloc, yloc, value, total, r) {
-      var alpha = 360 / total * value,
-          a = (90 - alpha) * Math.PI / 180,
-          x = xloc + r * Math.cos(a),
-          y = yloc - r * Math.sin(a),
-          path;
-      if (total == value) {
-          path = [
-              ["M", xloc, yloc - r],
-              ["A", r, r, 0, 1, 1, xloc - 0.01, yloc - r]
-          ];
-      } else {
-          path = [
-              ["M", xloc, yloc - r],
-              ["A", r, r, 0, +(alpha > 180), 1, x, y]
-          ];
-      }
-      return {
-          path: path
-      };
+  var clickFunc = function(e) {
+    circClickFunc(paper, cx, cy);
   };
+
+  currentCircle.click(clickFunc);
+  currentText.click(clickFunc);
 }
 
-$(document).ready(function() {
-  /*
-  var paper = Raphael(350, 0, 1000, 1000);
-  initArcAttr(paper);
+function drawTree(paper, data, cx, cy, rotation, size, radius, parent) {
+  rotation = rotation || 0;
+  size     = size || 100;
+  radius   = radius || 70;
+  parent   = parent || elementTree;
 
-  var circle = paper.circle(300, 300, 30);
-  circle.attr("fill", "#eee");
+  data.forEach(function(sector) {
 
-  var text = paper.text(300, 300, "hello");
+    console.log("drawing sector: " + sector.name);
+    console.log(sector);
 
-  var radius = 30;
-  for (var i = 0; i < 10; i++) {
-    radius += 20;
+    console.log("size = " + size);
+
+    var myTree = {};
+    parent[sector.name] = myTree;
+
+  
+    var mySize = (sector.size / 100) * size;
+    drawTree(paper, sector.sects, cx, cy, rotation, mySize, radius + 39, myTree);
 
     var arc = paper.path().attr({
-      "stroke": "#f00",
-      "stroke-width": 20,
-      arc: [300, 300, 0, 100, radius]
+      "stroke": randomColor(),
+      "stroke-width": 40,
+      arc: [300, 300, 10, 100, radius]
     });
 
-    // percentage
-    var amount = parseInt(Math.random() * 100);
+    rotAbout(arc, rotation, 300, 300);
+    myTree['_elem'] = arc;
+    elemMap[arc.id] = sector;
+
     arc.animate({
-      arc: [300, 300, amount, 100, radius]
-      }, 1000, "bounce"
-    );
-  }
-  */
-});
+      arc: [300, 300, mySize, 100, radius]
+    }, 750);
+    arc.click(function(e) {
+      arcClickFunc(e, paper, cx, cy, this.id, data);
+      previousSectors = data;
 
+      document.history.push({
+        "name": sector.name,
+        "sects": sector.sects
+      });
+    });
+    arc.mouseover(function() {
+      this.animate({'stroke-width': 50}, 100);
+      var str = elemMap[this.id].name;
+      appendPath(str);
+    });
+    arc.mouseout(function() {
+      this.animate({'stroke-width': 40}, 100);
+      removePath();
+    });
 
-function sampleData() {
-  return {
-    "name": "Enso",
-    "sects": [
-      {
-        "name": "School",
-        "size": 60,
-        "sects": [
-          {
-            "name": "Chemistry",
-            "size": 50,
-            "sects": []
-          },
-          {
-            "name": "DE",
-            "size": 25,
-            "sects": [
-              {
-                "name": "HW1",
-                "size": 75,
-                "sects": []
-              },
-              {
-                "name": "HW2",
-                "size": 25,
-                "sects": []
-              }
-            ]
-          },
-          {
-            "name": "Math",
-            "size": 25,
-            "sects": []
-          }
-        ]
-      },
-      {
-        "name": "Personal",
-        "size": 40,
-        "sects": []
-      }
-    ]
-  };
-}
-
-function latoify(text) {
-  text.attr({
-    "font-family": "Lato"
+    rotation += (mySize / 100) * 360;
   });
 }
 
-function rot(elem, deg) {
-  elem.transform("r" + deg);
+function arcClickFunc(event, paper, cx, cy, id) {
+  var sector = elemMap[id];
+  console.log('clicked:');
+
+  minimizeAllSects(paper);
+  drawTree(paper, sector.sects, cx, cy);
+  animateCircle(paper, sector.name, 50, cx, cy);
+
+  appendPath(sector.name);
 }
 
-function rotAbout(elem, deg, cx, cy) {
-  elem.transform("r" + deg + "," + cx + "," + cy);
+
+function circClickFunc(paper, cx, cy) {
+  if (document.history.length > 1) {
+    document.history.pop();
+    prev = document.history[document.history.length - 1];
+
+    minimizeAllSects(paper);
+
+    drawTree(paper, prev.sects, cx, cy);
+    animateCircle(paper, prev.name, 50, cx, cy);
+    removePath();
+  }
+}
+
+function minimizeAllSects(paper) {
+  paper.forEach(function (sect) {
+    if (sect.attr('arc')) {
+      var arc = sect.attr('arc');
+      sect.animate({
+        arc: [arc[0], arc[1], 0, arc[3], arc[4]]
+      }, 250);
+    }
+  });
 }
 
 function displayData(paper, data, cx, cy) {
-  var circle = paper.circle(cx, cy, 50);
-  circle.attr("fill", "#000");
-
-  var text = paper.text(cx, cy, data.name);
-  text.attr({
-    "font-size": "30px",
-    "color": "#ff0000"
-  });
-  text.attr("fill", "#ffffff");
-  latoify(text);
+  animateCircle(paper, data.name, 50, cx, cy);
 
   var rotation = 0;
   var radius = 70;
@@ -189,6 +166,10 @@ function displayData(paper, data, cx, cy) {
       arc: [300, 300, sect.size, 100, radius]
       }, 1000, "bounce"
     );
+
+    arc.click(function() {
+      zoomIn(paper, sect, cx, cy)
+    });
 
     arc.mouseover(function() {
       this.animate(
@@ -245,34 +226,68 @@ function displaySectors(paper, sects, cx, cy, rot, size, radius) {
   }
 }
 
+function zoomIn(paper, sector, cx, cy) {
+  var circle = paper.circle(cx, cy, 0);
+  circle.attr("fill", "#000");
+
+  circle.animate({r: 50}, 500);
+
+  var text = paper.text(cx, cy, sector.name);
+  text.attr({
+    "font-size": "0",
+    "color": "#ff0000"
+  });
+  text.attr("fill", "#ffffff");
+  latoify(text);
+  text.animate({'font-size': 25}, 500);
+
+  paper.forEach(function(e) {
+    if (e.attr('arc')) {
+      arc = e.attr('arc');
+      e.animate({
+        arc: [arc[0], arc[1], arc[2], arc[3], arc[4] - 39]
+      }, 500);
+    }
+  });
+}
+
+function setPath(str) {
+  $('#path').html(str);
+}
+
+function appendPath(str) {
+  $('#path').append("<span> / " + str + "</span>");
+}
+
+function removePath(str) {
+  var children = $('#path').children();
+  var last = children[children.length - 1];
+  last.remove();
+}
+
+function ghostAppend(str) {
+  var html = '<span class="grayed"> / ' + str + '</span>'
+  $('#path').append(html);
+}
+
 $(document).ready(function() {
   var paper = Raphael(350, 75, 500, 500);
   initArcAttr(paper);
 
-  displayData(paper, sampleData(), 300, 300);
+  //displayData(paper, sampleData(), 300, 300);
+  var data = sampleData();
+
+  previousSectors = data.sects;
+
+  drawTree(paper, data.sects, 300, 300);
+  animateCircle(paper, data.name, 50, 300, 300);
+
+  setPath(data.name);
+
+  document.history.push({
+    "name": data.name,
+    "sects": data.sects
+  });
 
   var radius = 30;
-  /*
-  for (var i = 0; i < 5; i++) {
-    // < 40 to avoid white spaces
-    radius += 39;
-
-    var arc = paper.path().attr({
-      "stroke": randomColor(),
-      "stroke-width": 40,
-      arc: [300, 300, 5, 100, radius]
-    });
-
-    var deg = parseInt(Math.random() * 360);
-    arc.transform("r" + deg + ",300,300");
-
-    // percentage
-    var amount = parseInt(Math.random() * 100);
-    arc.animate({
-      arc: [300, 300, amount, 100, radius]
-      }, 1000, "bounce"
-    );
-  }
-  */
-
 });

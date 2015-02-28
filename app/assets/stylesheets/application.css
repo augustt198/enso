@@ -16,4 +16,9 @@
 
 body {
   font-family: 'Lato', 'Helvetica', arial, sans-serif;
+  margin-left: 50px;
+}
+
+.grayed {
+  color: #919191;
 }
