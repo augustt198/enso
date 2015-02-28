@@ -1,0 +1,17 @@
+{
+  "root": {
+    "name": "foo",
+    "sects": [
+      {
+        "name": "sector 1",
+        "sects": [],
+        "size": 60
+      },
+      {
+        "name": "sector 2",
+        "sects": [],
+        "size": 40
+      }
+    ]
+  }
+}
