@@ -22,3 +22,8 @@ body {
 .grayed {
   color: #919191;
 }
+
+nav {
+  background-color: #B3B3B3;
+  padding-left: 20px;
+}
