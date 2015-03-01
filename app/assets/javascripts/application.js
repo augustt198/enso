@@ -20,6 +20,7 @@ var currentCircle;
 var currentText;
 
 var elemMap = {};
+var dataMap = {};
 document.history = [];
 var previousSectors;
 var previousName;
@@ -73,16 +74,18 @@ function drawTree(paper, data, cx, cy, rotation, size, radius, parent) {
     var arc = paper.path().attr({
       "stroke": randomColor(),
       "stroke-width": 40,
-      arc: [300, 300, 10, 100, radius]
+      arc: [300, 300, 0, 100, radius]
     });
 
     rotAbout(arc, rotation, 300, 300);
     myTree['_elem'] = arc;
+    sector['_elem'] = arc;
     elemMap[arc.id] = sector;
 
     arc.animate({
       arc: [300, 300, mySize, 100, radius]
     }, 750);
+
     arc.click(function(e) {
       arcClickFunc(e, paper, cx, cy, this.id, data);
       previousSectors = data;
@@ -92,11 +95,13 @@ function drawTree(paper, data, cx, cy, rotation, size, radius, parent) {
         "sects": sector.sects
       });
     });
+
     arc.mouseover(function() {
       this.animate({'stroke-width': 50}, 100);
       var str = elemMap[this.id].name;
       appendPath(str);
     });
+
     arc.mouseout(function() {
       this.animate({'stroke-width': 40}, 100);
       removePath();
@@ -106,17 +111,63 @@ function drawTree(paper, data, cx, cy, rotation, size, radius, parent) {
   });
 }
 
+function recalculateSizes(paper, data, cx, cy, rotation, size, radius) {
+  rotation = rotation || 0;
+  size     = size || 100;
+  radius   = radius || 70;
+
+  data.forEach(function(sector) {
+    var mySize = (sector.size / 100) * size;
+    recalculateSizes(paper, sector.sects, cx, cy, rotation, mySize, radius + 39);
+
+    var elem = sector['_elem'];
+    var prev_arc = elem.attr('arc');
+    var anim = Raphael.animation({
+      arc: [prev_arc[0], prev_arc[1], mySize, prev_arc[3], radius],
+      transform: "r" + rotation + "," + cx + "," + cy
+    }, 400);
+    elem.animate(anim.delay(300));
+    rotation += (mySize / 100) * 360;
+  });
+}
+
 function arcClickFunc(event, paper, cx, cy, id) {
   var sector = elemMap[id];
   console.log('clicked:');
 
-  minimizeAllSects(paper);
-  drawTree(paper, sector.sects, cx, cy);
-  animateCircle(paper, sector.name, 50, cx, cy);
+  //minimizeAllSects(paper);
+  //drawTree(paper, sector.sects, cx, cy);
+
 
   appendPath(sector.name);
+
+  var subtree = collectSubtreeNodes(sector);
+
+  paper.forEach(function(elem) {
+    if (subtree.indexOf(elemMap[elem.id]) < 1) {
+      elem.animate({
+        opacity : 0
+      }, 250, function () {
+        this.hide()
+      });
+    }
+  });
+
+
+  var data = subtree[0].sects;
+  recalculateSizes(paper, data, cx, cy);
+  animateCircle(paper, sector.name, 50, cx, cy);
 }
 
+function collectSubtreeNodes(node, arr) {
+  arr = arr || [];
+  arr.push(node);
+  for (var i = 0; i < node.sects.length; i++) {
+    collectSubtreeNodes(node.sects[i], arr);
+  }
+
+  return arr;
+}
 
 function circClickFunc(paper, cx, cy) {
   if (document.history.length > 1) {
@@ -284,6 +335,7 @@ $(document).ready(function() {
   animateCircle(paper, data.name, 50, 300, 300);
 
   setPath(data.name);
+  console.log(data);
 
   document.history.push({
     "name": data.name,

@@ -17,9 +17,15 @@ function sampleData() {
             "size": 25,
             "sects": [
               {
-                "name": "HW1",
+                "name": "Test #1",
                 "size": 75,
-                "sects": []
+                "sects": [
+                  {
+                    "name": "KMaps",
+                    "size": 50,
+                    "sects": []
+                  }
+                ]
               },
               {
                 "name": "HW2",
@@ -38,7 +44,57 @@ function sampleData() {
       {
         "name": "Personal",
         "size": 40,
-        "sects": []
+        "sects": [
+          {
+            "name": "Errands",
+            "size": 20,
+            "sects": [
+              {
+                "name": "Get Food",
+                "size": 50,
+                "sects": []
+              },
+              {
+                "name": "Buy Gifts",
+                "size": 25,
+                "sects": []
+              }
+            ]
+          },
+          {
+            "name": "Leisure",
+            "size": 40,
+            "sects": [
+              {
+                "name": "Movies",
+                "size": 25,
+                "sects": [
+                  {
+                    "name": "Iron Man",
+                    "size": 25,
+                    "sects": []
+                  },
+                  {
+                    "name": "The Avengers",
+                    "size": 25,
+                    "sects": []
+                  }
+                ]
+              },
+              {
+                "name": "TV Shows",
+                "size": 25,
+                "sects": [
+                  {
+                    "name": "The Office",
+                    "size": 75,
+                    "sects": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     ]
   };
