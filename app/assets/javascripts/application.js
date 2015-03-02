@@ -20,14 +20,17 @@ var currentCircle;
 var currentText;
 
 var elemMap = {};
-var dataMap = {};
 document.history = [];
 var previousSectors;
 var previousName;
 
-function animateCircle(paper, str, radius, cx, cy) {
+var parentMap = {}
+
+function animateCircle(paper, str, radius, cx, cy, fill) {
+  fill = fill || "#000";
+
   currentCircle = paper.circle(cx, cy, 0);
-  currentCircle.attr("fill", "#000");
+  currentCircle.attr("fill", fill);
 
   currentText = paper.text(cx, cy, str);
   currentText.attr({
@@ -67,7 +70,6 @@ function drawTree(paper, data, cx, cy, rotation, size, radius, parent) {
     var myTree = {};
     parent[sector.name] = myTree;
 
-  
     var mySize = (sector.size / 100) * size;
     drawTree(paper, sector.sects, cx, cy, rotation, mySize, radius + 39, myTree);
 
@@ -76,6 +78,8 @@ function drawTree(paper, data, cx, cy, rotation, size, radius, parent) {
       "stroke-width": 40,
       arc: [300, 300, 0, 100, radius]
     });
+
+    parentMap[arc.id] = parent;
 
     rotAbout(arc, rotation, 300, 300);
     myTree['_elem'] = arc;
@@ -90,10 +94,7 @@ function drawTree(paper, data, cx, cy, rotation, size, radius, parent) {
       arcClickFunc(e, paper, cx, cy, this.id, data);
       previousSectors = data;
 
-      document.history.push({
-        "name": sector.name,
-        "sects": sector.sects
-      });
+      document.history.push(sector);
     });
 
     arc.mouseover(function() {
@@ -111,14 +112,14 @@ function drawTree(paper, data, cx, cy, rotation, size, radius, parent) {
   });
 }
 
-function recalculateSizes(paper, data, cx, cy, rotation, size, radius) {
+function recalculateSizes(paper, data, cx, cy, zoom, rotation, size, radius) {
   rotation = rotation || 0;
   size     = size || 100;
   radius   = radius || 70;
 
   data.forEach(function(sector) {
     var mySize = (sector.size / 100) * size;
-    recalculateSizes(paper, sector.sects, cx, cy, rotation, mySize, radius + 39);
+    recalculateSizes(paper, sector.sects, cx, cy, zoom, rotation, mySize, radius + 39);
 
     var elem = sector['_elem'];
     var prev_arc = elem.attr('arc');
@@ -126,18 +127,27 @@ function recalculateSizes(paper, data, cx, cy, rotation, size, radius) {
       arc: [prev_arc[0], prev_arc[1], mySize, prev_arc[3], radius],
       transform: "r" + rotation + "," + cx + "," + cy
     }, 400);
-    elem.animate(anim.delay(300));
+
+    if (zoom) {
+      elem.animate(anim.delay(300));      
+    } else {
+      elem.animate(anim);
+    }
+
+    if (elem.attr('opacity') == 0) {
+      var anim = Raphael.animation({
+        opacity: 1
+      }, 100, function() { this.show() });
+      
+      elem.show().animate(anim.delay(400));
+    }
+    
     rotation += (mySize / 100) * 360;
   });
 }
 
 function arcClickFunc(event, paper, cx, cy, id) {
   var sector = elemMap[id];
-  console.log('clicked:');
-
-  //minimizeAllSects(paper);
-  //drawTree(paper, sector.sects, cx, cy);
-
 
   appendPath(sector.name);
 
@@ -147,15 +157,15 @@ function arcClickFunc(event, paper, cx, cy, id) {
     if (subtree.indexOf(elemMap[elem.id]) < 1) {
       elem.animate({
         opacity : 0
-      }, 250, function () {
-        this.hide()
-      });
+      }, 250, function() { this.hide() });
     }
   });
 
-
   var data = subtree[0].sects;
-  recalculateSizes(paper, data, cx, cy);
+  recalculateSizes(paper, data, cx, cy, true);
+
+  var color = paper.getById(id).attr('stroke');
+
   animateCircle(paper, sector.name, 50, cx, cy);
 }
 
@@ -174,9 +184,9 @@ function circClickFunc(paper, cx, cy) {
     document.history.pop();
     prev = document.history[document.history.length - 1];
 
-    minimizeAllSects(paper);
-
-    drawTree(paper, prev.sects, cx, cy);
+    console.log("prev elem = " + prev['_elem']);
+    
+    recalculateSizes(paper, prev.sects, cx, cy, false);
     animateCircle(paper, prev.name, 50, cx, cy);
     removePath();
   }
@@ -326,7 +336,6 @@ $(document).ready(function() {
   var paper = Raphael(350, 75, 500, 500);
   initArcAttr(paper);
 
-  //displayData(paper, sampleData(), 300, 300);
   var data = sampleData();
 
   previousSectors = data.sects;
@@ -337,10 +346,7 @@ $(document).ready(function() {
   setPath(data.name);
   console.log(data);
 
-  document.history.push({
-    "name": data.name,
-    "sects": data.sects
-  });
+  document.history.push(data);
 
   var radius = 30;
 });
